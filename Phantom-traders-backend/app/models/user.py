@@ -55,7 +55,7 @@ class CheckoutRequest(BaseModel):
 class CheckoutResponse(BaseModel):
     checkout_url: str
     session_id: str
-
+mode: str | None = None
 
 # ── Subscription ──────────────────────────────────────────────────────────────
 
