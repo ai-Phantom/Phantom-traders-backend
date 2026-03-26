@@ -101,7 +101,7 @@ total_alerts: int = 0
 intents = discord.Intents.default()
 intents.guilds = True
 
-bot = commands.Bot(command_prefix="!bs", intents=intents)
+bot = commands.Bot(command_prefix="!bs", intents=intents, help_command=None)
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 
@@ -655,7 +655,7 @@ async def show_watchlist(ctx):
     )
 
 
-@bot.command(name="help")
+@bot.command(name="bshelp")
 async def bullseye_help(ctx):
     """!bshelp — Bullseye bot commands"""
     embed = discord.Embed(
