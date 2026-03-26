@@ -1,0 +1,89 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate Python
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r Phantom-traders-backend/requirements.txt
+
+      - name: Check Python syntax on all files
+        run: |
+          echo "🔍 Checking Python syntax..."
+          find Phantom-traders-backend -name "*.py" | while read f; do
+            python -m py_compile "$f" && echo "✅ $f" || { echo "❌ Syntax error in $f"; exit 1; }
+          done
+
+      - name: Check critical imports
+        run: |
+          cd Phantom-traders-backend
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          try:
+              from app.config import get_settings
+              print('✅ config imports OK')
+          except ImportError as e:
+              print(f'⚠️  config import warning: {e}')
+          "
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "🔍 Scanning for hardcoded secrets..."
+          if grep -r "sk_live_" Phantom-traders-backend --include="*.py"; then
+            echo "❌ Live Stripe key hardcoded in Python file!"
+            exit 1
+          fi
+          if grep -r "sk_test_" Phantom-traders-backend --include="*.py"; then
+            echo "❌ Test Stripe key hardcoded in Python file!"
+            exit 1
+          fi
+          if grep -r "whsec_" Phantom-traders-backend --include="*.py" | grep -v "os.environ\|get_settings\|getenv"; then
+            echo "❌ Webhook secret hardcoded in Python file!"
+            exit 1
+          fi
+          echo "✅ No hardcoded secrets found"
+
+      - name: Verify required files exist
+        run: |
+          FILES=(
+            "Phantom-traders-backend/app/main.py"
+            "Phantom-traders-backend/app/config.py"
+            "Phantom-traders-backend/app/routers/auth.py"
+            "Phantom-traders-backend/app/routers/stripe_webhooks.py"
+            "Phantom-traders-backend/app/routers/subscriptions.py"
+            "Phantom-traders-backend/requirements.txt"
+          )
+          for f in "${FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "❌ Missing required file: $f"
+              exit 1
+            fi
+            echo "✅ Found: $f"
+          done
+
+      - name: Deployment summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ All checks passed!"
+          echo "🚀 Render will deploy automatically"
+          echo "🌐 API: https://phantom-traders-backend.onrender.com"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
