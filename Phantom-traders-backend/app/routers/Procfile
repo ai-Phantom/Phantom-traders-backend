@@ -1,0 +1,1 @@
+worker: python phantom_bot.py
